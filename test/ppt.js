@@ -1,6 +1,6 @@
 const Ppt = artifacts.require("./Ppt.sol");
 
-contract("SimpleStorage", accounts => {
+contract("PPT Token", accounts => {
   
   it("...should have 0PPt.", async () => {
     const pptInstance = await Ppt.deployed();
