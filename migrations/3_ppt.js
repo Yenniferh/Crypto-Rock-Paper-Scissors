@@ -1,5 +1,5 @@
-var Ppt = artifacts.require("./Ppt.sol");
+var PPT = artifacts.require("./PPT.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(Ppt);
+  deployer.deploy(PPT);
 };
