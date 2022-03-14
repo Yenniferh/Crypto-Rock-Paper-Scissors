@@ -5,4 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract PPT is ERC20("Piedra-Papel-Tijera Token", "PPT") {
 
+    function decimals() public view virtual override returns (uint8) {
+        return 0;
+    }
+
 }
