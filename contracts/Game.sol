@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
 
-import "./PPT.sol";
+import "./RPS.sol";
 import "./RandomGenerator.sol";
 
-contract Game is PPT, RandomGenerator {
+contract Game is RPS, RandomGenerator {
     address public immutable owner;
 
     // Game utilities
@@ -14,9 +14,9 @@ contract Game is PPT, RandomGenerator {
     mapping(uint => uint) private _randomRequestsResult;
 
     // Valid Options
-    bytes32 public constant PIEDRA = keccak256("PIEDRA");
-    bytes32 public constant PAPEL = keccak256("PAPEL");
-    bytes32 public constant TIJERA = keccak256("TIJERA");
+    bytes32 public constant ROCK = keccak256("ROCK");
+    bytes32 public constant PAPER = keccak256("PAPER");
+    bytes32 public constant SCISSORS = keccak256("SCISSORS");
 
     // Game config
     uint public constant COST_PER_GAME = 10;
@@ -52,11 +52,11 @@ contract Game is PPT, RandomGenerator {
         owner = msg.sender;
 
         // Set options
-        _options[0] = PIEDRA;
-        _options[1] = PAPEL;
-        _options[2] = TIJERA;
+        _options[0] = ROCK;
+        _options[1] = PAPER;
+        _options[2] = SCISSORS;
 
-        // Initial PPT Balance
+        // Initial RPS Balance
         _mint(msg.sender, MINTING_AMOUNT);
     }
 
@@ -85,9 +85,9 @@ contract Game is PPT, RandomGenerator {
             "You have not joined to the game."
         );
         require(
-            (playerSelectedOption_ == PIEDRA
-            || playerSelectedOption_ == PAPEL
-            || playerSelectedOption_ == TIJERA),
+            (playerSelectedOption_ == ROCK
+            || playerSelectedOption_ == PAPER
+            || playerSelectedOption_ == SCISSORS),
             "Invalid option."
         );
         if(balanceOf(owner) <= WIN_PAYING_AMOUNT) {
@@ -150,11 +150,11 @@ contract Game is PPT, RandomGenerator {
         bytes32 playerSelectedOption_,
         bytes32 contractChoice
     ) private pure returns (bool){
-        if(playerSelectedOption_ == PAPEL && contractChoice == PIEDRA){
+        if(playerSelectedOption_ == PAPER && contractChoice == ROCK){
             return true;
-        }else if(playerSelectedOption_ == TIJERA && contractChoice == PAPEL){
+        }else if(playerSelectedOption_ == SCISSORS && contractChoice == PAPER){
             return true;
-        }else if (playerSelectedOption_ == PIEDRA && contractChoice == TIJERA){
+        }else if (playerSelectedOption_ == ROCK && contractChoice == SCISSORS){
             return true;
         }
         return false;

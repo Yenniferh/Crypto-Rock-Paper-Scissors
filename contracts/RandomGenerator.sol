@@ -37,9 +37,9 @@ abstract contract RandomGenerator is VRFConsumerBaseV2 {
   // The default is 3, but you can set this higher.
   uint16 requestConfirmations = 3;
 
-  // For this example, retrieve 2 random values in one request.
+  // For this example, retrieve 1 random value in one request.
   // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
-  uint32 numWords = 2;
+  uint32 numWords = 1;
 
   uint256[] public s_randomWords;
   uint256 public s_requestId;
@@ -64,14 +64,10 @@ abstract contract RandomGenerator is VRFConsumerBaseV2 {
     );
     return s_requestId;
   }
-  
+
   function fulfillRandomWords(
     uint256 requestId,
     uint256[] memory randomWords
   ) internal virtual override;
 
-/*   modifier onlyOwner() {
-    require(msg.sender == s_owner);
-    _;
-  } */
 }
