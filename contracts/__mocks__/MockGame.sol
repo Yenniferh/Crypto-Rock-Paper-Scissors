@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
 
-import "./RPS.sol";
-import "./RandomGenerator.sol";
+import './MockRandomGenerator.sol';
+import '../RPS.sol';
 
-contract Game is RPS, RandomGenerator {
+contract MockGame is RPS, MockRandomGenerator {
     address public immutable owner;
 
     // Game utilities
@@ -61,17 +61,6 @@ contract Game is RPS, RandomGenerator {
     }
 
     function joinGame() public {
-        require(
-            msg.sender != owner,
-            "Owner cannot be the player."
-        );
-        require(
-            _userInitGame[msg.sender] != true,
-            "You already have joined to the game."
-        );
-        _userInitGame[msg.sender] = true;
-
-        // Give some tokens to the player
         if(balanceOf(msg.sender) == 0){
             _transfer(owner, msg.sender, COURTESY_AMOUNT);
         }
@@ -80,16 +69,6 @@ contract Game is RPS, RandomGenerator {
     function play(
         bytes32 playerSelectedOption_
     ) public payable {
-        require(
-            _userInitGame[msg.sender] == true,
-            "You have not joined to the game."
-        );
-        require(
-            (playerSelectedOption_ == ROCK
-            || playerSelectedOption_ == PAPER
-            || playerSelectedOption_ == SCISSORS),
-            "Invalid option."
-        );
         if(balanceOf(owner) <= WIN_PAYING_AMOUNT) {
             _mint(owner, MINTING_AMOUNT);
         }
@@ -99,8 +78,9 @@ contract Game is RPS, RandomGenerator {
         uint requestId = super.requestRandomWords();
         _playerSelectedOption[requestId] = playerSelectedOption_;
         _randomRequestsResult[requestId] = RANDOM_IN_PROGRESS;
-
         emit PlayerRoundStarted(requestId, msg.sender);
+
+        super.rawFulfillRandomWords(requestId);
     }
 
     function fulfillRandomWords(
@@ -160,13 +140,4 @@ contract Game is RPS, RandomGenerator {
         return false;
     }
 
-    function finishGame() public {
-        require(
-            _userInitGame[msg.sender] == true,
-            "You have not joined to the game."
-        );
-
-        // User is no longer playing
-        _userInitGame[msg.sender] = false;
-    }
 }
