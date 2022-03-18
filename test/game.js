@@ -12,234 +12,742 @@ contract("Game", accounts => {
   })
 
   describe("RPS Token", () => {
-    it("should have 0RPS.", async () => {
-      const balance = await gameInstance.balanceOf(accounts[1]);
-      assert.equal(balance.toNumber(), 0);
+    describe("Owner", () => {
+      it("should have 1000RPS initially", async () => {
+        const balance = await gameInstance.balanceOf(accounts[0]);
+        assert.equal(balance.toNumber(), 1000);
+      });
     });
 
-    it("should send and receive RPS.", async () => {
-      // Setup 2 accounts.
-      const accountOne = accounts[1];
-      const accountTwo = accounts[2];
+    describe("Players", () => {
+      it("should have 0RPS initially", async () => {
+        const balance = await gameInstance.balanceOf(accounts[1]);
+        assert.equal(balance.toNumber(), 0);
+      });
 
-      // Send 100RPS
-      await gameInstance.transfer(accountOne, 100);
+      it("should send RPS", async () => {
+        // Setup account
+        const accountOne = accounts[1];
+        const accountTwo = accounts[2];
 
-      // Get the new balance of the account
-      const newBalance = await gameInstance.balanceOf(accountOne);
+        // Owner send 100RPS to accountOne
+        await gameInstance.transfer(accountOne, 100);
 
-      assert.equal(newBalance.toNumber(), 100);
+        // AccountOne send 40RPS to accountTwo
+        await gameInstance.transfer(accountTwo, 40, { from: accountOne });
 
-      // Receive RPS
-      await gameInstance.transfer(accountTwo, 100, { from: accountOne });
+        // Get the new balance of the accountOne
+        const newBalance = await gameInstance.balanceOf(accountOne);
 
-      // Get the new balance of the account
-      const newBalance2 = await gameInstance.balanceOf(accountTwo);
+        assert.equal(newBalance.toNumber(), 60);
+      });
 
-      assert.equal(newBalance2.toNumber(), 100);
+      it("should receive RPS", async () => {
+        // Setup account
+        const accountOne = accounts[1];
+        const accountTwo = accounts[2];
 
-      const finalBalance = await gameInstance.balanceOf(accountOne);
+        // Owner send 100RPS to accountOne
+        await gameInstance.transfer(accountOne, 100);
 
-      assert.equal(finalBalance.toNumber(), 0);
-    });
-  });
+        // AccountOne send 40RPS to accountTwo
+        await gameInstance.transfer(accountTwo, 40, { from: accountOne });
 
-  describe("Joining the game", () => {
-    it("player should join to the game.", async () => {
-      // Join the game
-      await gameInstance.joinGame({from: accounts[1]});
+        // Get the new balance of the accountTwo
+        const newBalance = await gameInstance.balanceOf(accountTwo);
 
-      // Get the new balance of the account
-      const newBalance = await gameInstance.balanceOf(accounts[1]);
-
-      // Newbie should have 100RPS
-      assert.equal(newBalance.toNumber(), 100);
-    });
-
-    it("owner should not join to the game.", async () => {
-      // Join the game
-      try {
-        await gameInstance.joinGame({from: accounts[0]});
-      } catch (error) {
-        assert(
-          error.reason === "Owner cannot be the player.",
-          "unexpected error message");
-        return;
-      }
-
-      assert.fail('should have thrown before');
-    });
-
-    it("player should not double join to the game.", async () => {
-      await gameInstance.joinGame({from: accounts[1]});
-
-      // Not allowed to join the game again, since it's already joined.
-      try {
-        await gameInstance.joinGame({from: accounts[1]});
-      } catch (error) {
-        assert(
-          error.reason === "You already have joined to the game.",
-          "unexpected error message"
-        );
-        return;
-      }
-
-      assert.fail('should have thrown before');
+        assert.equal(newBalance.toNumber(), 40);
+      });
     });
   });
 
-  describe("Playing the game", () => {
-    let mockGameInstance;
+  describe("Game", () => {
+    describe("Owner", () => {
+      context("When joining to the game", async () => {
+        it("should not join", async () => {
+          try {
+            await gameInstance.joinGame({from: accounts[0]});
+          } catch (error) {
+            assert(
+              error.reason === "Owner cannot be the player.",
+              `unexpected error message: ${error.reason}`
+            );
+            return;
+          }
+          assert.fail('should have thrown before');
+        });
+      });
 
-    // Options
-    let ROCK, PAPER, SCISSORS;
+      context("When playing", async () => {
+        it("should not play since can not join", async () => {
+          let PAPER = await gameInstance.PAPER();
+          try {
+            await gameInstance.play(PAPER, {from: accounts[0]});
+          } catch (error) {
+            assert(
+              error.reason === "You have not joined to the game.",
+              `unexpected error message: ${error.reason}`
+            );
+            return;
+          }
+          assert.fail('should have thrown before');
+        });
+      });
 
-    //Outcomes
-    let PLAYER_WINS, TIED_ROUND, PLAYER_LOSES;
-
-    before(async () => {
-      mockGameInstance = await MockGame.new();
-      // Set constants
-      ROCK = await mockGameInstance.ROCK();
-      PAPER = await mockGameInstance.PAPER();
-      SCISSORS = await mockGameInstance.SCISSORS();
-      PLAYER_WINS = await mockGameInstance.PLAYER_WINS();
-      TIED_ROUND = await mockGameInstance.TIED_ROUND();
-      PLAYER_LOSES = await mockGameInstance.PLAYER_LOSES();
+      context("When finishing the game", async () => {
+        it("should not finish since can not join", async () => {
+          try {
+            await gameInstance.finishGame({from: accounts[0]});
+          } catch (error) {
+            assert(
+              error.reason === "You have not joined to the game.",
+              `unexpected error message: ${error.reason}`
+            );
+            return;
+          }
+          assert.fail('should have thrown before');
+        });
+      });
     });
 
-    beforeEach(async () => {
-      mockGameInstance = await MockGame.new();
-      await mockGameInstance.joinGame({from: accounts[1]});
-    });
+    describe("Player", () => {
+      context("Joining to the game", async () => {
+        it("should join", async () => {
+          // Join the game
+          await gameInstance.joinGame({from: accounts[1]});
+    
+          // Get the new balance of the account
+          const newBalance = await gameInstance.balanceOf(accounts[1]);
+    
+          // Newbie should have 100RPS
+          assert.equal(newBalance.toNumber(), 100);
+        });
 
-    it("should win the round.", async () => {
-      // Mock random provided by chainlink
-      await mockGameInstance.setRandom(0);
+        it("should not double join", async () => {
+          await gameInstance.joinGame({from: accounts[1]});
 
-      // Play the game
-      const play = await mockGameInstance.play(
-        PAPER,
-        {from: accounts[1]}
-      );
+          try {
+            await gameInstance.joinGame({from: accounts[1]});
+          } catch (error) {
+            assert(
+              error.reason === "You already have joined to the game.",
+              `unexpected error message: ${error.reason}`
+            );
+            return;
+          }
+          assert.fail('should have thrown before');
+        });
+      });
 
-      // Get the result of the round
-      const requestId = filterLogsByEvent(
-        play.logs,
-        "PlayerRoundStarted"
-      )[0].args.requestId;
-      const outcome = await mockGameInstance.queryOutcome(
-        requestId,
-        {from: accounts[1]}
-      );
+      context("Have joined to the game", async () => {
+        context("when playing", async () => {
+          let mockGameInstance;
 
-      // Result should be PLAYER WINS
-      const result = filterLogsByEvent(
-        outcome.logs,
-        "RoundOutcome"
-      )[0].args.result;
-      assert.equal(result, PLAYER_WINS);
-    });
+          // Options
+          let ROCK; // Option 0
+          let PAPER; // Option 1
+          let SCISSORS; // Option 2
 
-    it("should be a tied round.", async () => {
-      // Mock random provided by chainlink
-      await mockGameInstance.setRandom(1);
+          //Outcomes
+          let PLAYER_WINS, TIED_ROUND, PLAYER_LOSES;
 
-      // Play the game
-      const play = await mockGameInstance.play(
-        PAPER,
-        {from: accounts[1]}
-      );
+          before(async () => {
+            mockGameInstance = await MockGame.new();
+            // Set constants
+            ROCK = await mockGameInstance.ROCK();
+            PAPER = await mockGameInstance.PAPER();
+            SCISSORS = await mockGameInstance.SCISSORS();
+            PLAYER_WINS = await mockGameInstance.PLAYER_WINS();
+            TIED_ROUND = await mockGameInstance.TIED_ROUND();
+            PLAYER_LOSES = await mockGameInstance.PLAYER_LOSES();
+          });
 
-      // Get the result of the round
-      const requestId = filterLogsByEvent(
-        play.logs,
-        "PlayerRoundStarted"
-      )[0].args.requestId;
-      const outcome = await mockGameInstance.queryOutcome(
-        requestId,
-        {from: accounts[1]}
-      );
+          beforeEach(async () => {
+            mockGameInstance = await MockGame.new();
+            await mockGameInstance.joinGame({from: accounts[1]});
+          });
 
-      // Result should be TIED ROUND
-      const result = filterLogsByEvent(
-        outcome.logs,
-        "RoundOutcome"
-      )[0].args.result;
-      assert.equal(result, TIED_ROUND);
-    });
+          context("ROCK vs. SCISSORS", async () => {
+            it("should win the round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(2);
 
-    it("should lose the round.", async () => {
-      // Mock random provided by chainlink
-      await mockGameInstance.setRandom(2);
+              // Play the game
+              const play = await mockGameInstance.play(
+                ROCK,
+                {from: accounts[1]}
+              );
 
-      // Play the game
-      const play = await mockGameInstance.play(
-        PAPER,
-        {from: accounts[1]}
-      );
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
 
-      // Get the result of the round
-      const requestId = filterLogsByEvent(
-        play.logs,
-        "PlayerRoundStarted"
-      )[0].args.requestId;
-      const outcome = await mockGameInstance.queryOutcome(
-        requestId,
-        {from: accounts[1]}
-      );
+              // Result should be PLAYER WINS
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, PLAYER_WINS);
+            });
 
-      // Result should be PLAYER LOSES
-      const result = filterLogsByEvent(
-        outcome.logs,
-        "RoundOutcome"
-      )[0].args.result;
-      assert.equal(result, PLAYER_LOSES);
-    });
-  });
+            it("should win 30RPS", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(2);
 
-  describe("Ending the game", () => {
-    it("player should finish the game.", async () => {
-      // Join the game
-      await gameInstance.joinGame({from: accounts[1]});
+              // Play the game
+              const play = await mockGameInstance.play(
+                ROCK,
+                {from: accounts[1]}
+              );
 
-      // Finish the game
-      try {
-        await gameInstance.finishGame({from: accounts[1]});
-      } catch (error) {
-        assert.equal(error.length, 0, 'error message must be empty');
-      }
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
 
-    });
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
 
-    it("should not finish the game when user has not joined.", async () => {
-      // Finish the game
-      try {
-        await gameInstance.finishGame({from: accounts[2]});
-      } catch (error) {
-        assert(
-          error.reason === "You have not joined to the game.",
-          "unexpected error message")
-        ;
-        return;
-      }
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
 
-      assert.fail('should have thrown before');
-    });
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber() + 30);
+            });
+          });
+          
+          context("ROCK vs. ROCK", async () => {
+            it("should be a tied round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(0);
 
-    it("should not finish the game when user is the owner.", async () => {
-      // Finish the game
-      try {
-        await gameInstance.finishGame({from: accounts[0]});
-      } catch (error) {
-        assert(
-          error.reason === "You have not joined to the game.", // Owner cannot join the game.
-          "unexpected error message"
-        );
-        return;
-      }
+              // Play the game
+              const play = await mockGameInstance.play(
+                ROCK,
+                {from: accounts[1]}
+              );
 
-      assert.fail('should have thrown before');
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              // Result should be TIED ROUND
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, TIED_ROUND);
+            });
+
+            it("should get the bet amount back", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(0);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                ROCK,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber() + 10);
+            });
+          });
+
+          context("ROCK vs. PAPER", async () => {
+            it("should lose the round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(1);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                ROCK,
+                {from: accounts[1]}
+              );
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              // Result should be PLAYER LOSES
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, PLAYER_LOSES);
+            });
+
+            it("should not get RPS", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(1);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                ROCK,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber());
+            });
+          });
+
+          context("PAPER vs. ROCK", async () => {
+            it("should win the round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(0);
+  
+              // Play the game
+              const play = await mockGameInstance.play(
+                PAPER,
+                {from: accounts[1]}
+              );
+  
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+  
+              // Result should be PLAYER WINS
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, PLAYER_WINS);
+            });
+
+            it("should win 30RPS", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(0);
+  
+              // Play the game
+              const play = await mockGameInstance.play(
+                PAPER,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber() + 30);
+            });
+          });
+          
+          context("PAPER vs. PAPER", async () => {
+            it("should be a tied round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(1);
+  
+              // Play the game
+              const play = await mockGameInstance.play(
+                PAPER,
+                {from: accounts[1]}
+              );
+  
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+  
+              // Result should be TIED ROUND
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, TIED_ROUND);
+            });
+
+            it("should get the bet amount back", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(1);
+  
+              // Play the game
+              const play = await mockGameInstance.play(
+                PAPER,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber() + 10);
+            });
+          });
+
+          context("PAPER vs. SCISSORS", async () => {
+            it("should lose the round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(2);
+  
+              // Play the game
+              const play = await mockGameInstance.play(
+                PAPER,
+                {from: accounts[1]}
+              );
+  
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+  
+              // Result should be PLAYER LOSES
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, PLAYER_LOSES);
+            });
+
+            it("should not get RPS", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(2);
+  
+              // Play the game
+              const play = await mockGameInstance.play(
+                PAPER,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber());
+            });
+          });
+
+          context("SCISSORS vs. PAPER", async () => {
+            it("should win the round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(1);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                SCISSORS,
+                {from: accounts[1]}
+              );
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              // Result should be PLAYER WINS
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, PLAYER_WINS);
+            });
+
+            it("should win 30RPS", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(1);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                SCISSORS,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber() + 30);
+            });
+          });
+          
+          context("SCISSORS vs. SCISSORS", async () => {
+            it("should be a tied round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(2);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                SCISSORS,
+                {from: accounts[1]}
+              );
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              // Result should be TIED ROUND
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, TIED_ROUND);
+            });
+
+            it("should get the bet amount back", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(2);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                SCISSORS,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber() + 10);
+            });
+          });
+
+          context("SCISSORS vs. ROCK", async () => {
+            it("should lose the round", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(0);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                SCISSORS,
+                {from: accounts[1]}
+              );
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              const outcome = await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              // Result should be PLAYER LOSES
+              const result = filterLogsByEvent(
+                outcome.logs,
+                "RoundOutcome"
+              )[0].args.result;
+              assert.equal(result, PLAYER_LOSES);
+            });
+
+            it("should not get RPS", async () => {
+              // Mock random provided by chainlink
+              await mockGameInstance.setRandom(0);
+
+              // Play the game
+              const play = await mockGameInstance.play(
+                SCISSORS,
+                {from: accounts[1]}
+              );
+
+              const initialBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              // Get the result of the round
+              const requestId = filterLogsByEvent(
+                play.logs,
+                "PlayerRoundStarted"
+              )[0].args.requestId;
+              await mockGameInstance.queryOutcome(
+                requestId,
+                {from: accounts[1]}
+              );
+
+              const finalBalance = await mockGameInstance.balanceOf(accounts[1]);
+
+              assert.equal(finalBalance.toNumber(), initialBalance.toNumber());
+            });
+          });
+
+          context("send an invalid option", async () => {
+            it("should not play", async () => {
+              // keccak256("OTHER")
+              let OTHER = "0x35b65de3b579a9ce74763d33e74f08dcef72a66ee55fd214549ace2be760d16d";
+              await gameInstance.joinGame({from: accounts[1]});
+              try {
+                await gameInstance.play(
+                  OTHER,
+                  {from: accounts[1]}
+                );
+              } catch (error) {
+                assert(
+                  error.reason === "Invalid option.",
+                  `unexpected error message: ${error.reason}`
+                );
+                return;
+              }
+              assert.fail('should have thrown before');
+            });
+          });
+        });
+
+        context("when finishing the game", async () => {
+          it("should finish", async () => {
+            await gameInstance.joinGame({from: accounts[1]});
+
+            try {
+              await gameInstance.finishGame({from: accounts[1]});
+            } catch (error) {
+              assert.equal(error.length, 0, 'error message must be empty');
+              return;
+            }
+          });
+        });
+      });
+
+      context("Not joined to the game", async () => {
+        context("when playing", async () => {
+          it("should not play", async () => {
+            let PAPER = await gameInstance.PAPER();
+            try {
+              await gameInstance.play(PAPER, {from: accounts[0]});
+            } catch (error) {
+              assert(
+                error.reason === "You have not joined to the game.",
+                `unexpected error message: ${error.reason}`
+              );
+              return;
+            }
+            assert.fail('should have thrown before');
+          });
+        });
+
+        context("when finishing the game", async () => {
+          it("should not finish", async () => {
+            try {
+              await gameInstance.finishGame({from: accounts[2]});
+            } catch (error) {
+              assert(
+                error.reason === "You have not joined to the game.",
+                `unexpected error message: ${error.reason}`
+              );
+              return;
+            }
+            assert.fail('should have thrown before');
+          });
+        });
+      });
     });
   });
 });

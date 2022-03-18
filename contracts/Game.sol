@@ -21,8 +21,8 @@ contract Game is RPS, RandomGenerator {
     // Game config
     uint public constant COST_PER_GAME = 10;
     uint public constant WIN_PAYING_AMOUNT = 30;
-    uint public constant COURTESY_AMOUNT = 100;
-    uint public constant MINTING_AMOUNT = 1000;
+    uint private constant COURTESY_AMOUNT = 100;
+    uint private constant MINTING_AMOUNT = 1000;
 
     // Outcomes
     bytes32 public constant PLAYER_WINS = keccak256("PLAYER WINS");
@@ -130,18 +130,16 @@ contract Game is RPS, RandomGenerator {
         );
         bytes32 playerSelectedOption_ = _playerSelectedOption[requestId];
         bytes32 contractChoice = _options[_randomRequestsResult[requestId] - 1]; // Options start from 0
+        _randomRequestsResult[requestId] = ALREADY_VISITED;
 
         // Outcomes
         if(isAWinScenario(playerSelectedOption_, contractChoice)) { // User win
             _transfer(owner, msg.sender, WIN_PAYING_AMOUNT);
-            _randomRequestsResult[requestId] = ALREADY_VISITED;
             emit RoundOutcome(requestId, contractChoice, PLAYER_WINS);
         }else if (playerSelectedOption_ == contractChoice){ // Tied match
             _transfer(owner, msg.sender, COST_PER_GAME);
-            _randomRequestsResult[requestId] = ALREADY_VISITED;
             emit RoundOutcome(requestId, contractChoice, TIED_ROUND);
         }else {
-            _randomRequestsResult[requestId] = ALREADY_VISITED;
             emit RoundOutcome(requestId, contractChoice, PLAYER_LOSES);
         }
     }
