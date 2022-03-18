@@ -61,7 +61,7 @@ contract("Game", accounts => {
     });
   });
 
-  describe("Game", () => {
+  describe("RPS Game", () => {
     describe("Owner", () => {
       context("When joining to the game", async () => {
         it("should not join", async () => {
