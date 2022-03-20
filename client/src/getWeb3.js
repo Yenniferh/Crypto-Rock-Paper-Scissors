@@ -42,7 +42,6 @@ const getWeb3 = () =>
             resolve(web3Ganache);
           }
         }
-        // resolve(web3);
       }
     });
   });

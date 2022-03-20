@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import GameContract from "./contracts/Game.json";
 import getWeb3 from "./getWeb3";
 
-import "./App.css";
-
 const App = () => {
   const [web3, setWeb3] = useState(null);
   const [accounts, setAccounts] = useState(null);
@@ -100,6 +98,7 @@ const App = () => {
 
     setGameConstants();
   }, [contract]);
+
   const getBalance = async () => {
     const response = await balance.of(accounts[0]).call();
 
@@ -112,7 +111,7 @@ const App = () => {
 
   return (
     <div className="App">
-      <h1>Good to Go!</h1>
+      <h1 className="text-3xl font-bold underline">Good to Go!</h1>
       <p>Your Truffle Box is installed and ready.</p>
       <h2>Smart Contract Example</h2>
       <p>
