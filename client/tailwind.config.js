@@ -3,7 +3,20 @@ module.exports = {
     "./src/**/*.{js,jsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'display': [
+          'Dosis',
+          'Helvetica',
+          'sans-serif'
+        ],
+        'body': [
+          'Poppins',
+          'Arial',
+          'sans-serif'
+        ]
+      }
+    },
   },
   plugins: [],
 }

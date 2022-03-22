@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import GameContract from "./contracts/Game.json";
 import getWeb3 from "./getWeb3";
 
+import GameBoard from "./containers/GameBoard";
+
 const App = () => {
-  const [web3, setWeb3] = useState(null);
+  /* const [web3, setWeb3] = useState(null);
   const [accounts, setAccounts] = useState(null);
   const [contract, setContract] = useState(null);
   const [balance , setBalance] = useState({
@@ -97,9 +99,9 @@ const App = () => {
     }
 
     setGameConstants();
-  }, [contract]);
+  }, [contract]); */
 
-  const getBalance = async () => {
+  /* const getBalance = async () => {
     const response = await balance.of(accounts[0]).call();
 
     alert(`Your balance is ${response}`);
@@ -108,21 +110,9 @@ const App = () => {
   if (!web3) {
     return <div>Loading Web3, accounts, and contract...</div>;
   }
-
+ */
   return (
-    <div className="App">
-      <h1 className="text-3xl font-bold underline">Good to Go!</h1>
-      <p>Your Truffle Box is installed and ready.</p>
-      <h2>Smart Contract Example</h2>
-      <p>
-        If your contracts compiled and migrated successfully, below will show
-        a stored value of 5 (by default).
-      </p>
-      <p>
-        Try changing the value stored on <strong>line 42</strong> of App.js.
-      </p>
-      <button onClick={getBalance}>Get balance</button>
-    </div>
+    <GameBoard />
   );
 }
 
