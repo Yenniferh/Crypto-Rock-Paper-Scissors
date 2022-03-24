@@ -1,32 +1,155 @@
 import { useState, useEffect } from 'react'
 import Button from '../../components/Button'
-import { ReactComponent as LoadingIcon} from '../../assets/loader.svg'
+import Loader from '../../components/Loader'
 
-const Play = ({ isLoading, playGame, tokensAmount, outcome, query }) => {
+import {
+  outcomes,
+  initGameConstants,
+  emojiToBytes32,
+  resultBytes32ToString,
+  bytes32ToEmoji
+} from '../../utils/game.js'
+
+
+const Play = ({
+  web3,
+  contract,
+  accounts,
+}) => {
+  // State
+  const [requestId, setRequestId] = useState(0)
+  const [responseIsReady, setResponseIsReady] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [outcome, setOutcome] = useState({
+    contractChoice: null,
+    result: null
+  })
+  const [tokensBalance, setTokensBalance] = useState(0)
+
   const [userDisplay, setUserDisplay] = useState('')
-  const [robotDisplay, setRobotDisplay] = useState('')
-  const [input, setInput] = useState('')
 
-  const handleClick = async (choice) => {
-    setUserDisplay(choice)
-    playGame(choice)
-  }
 
   useEffect(() => {
-    if (outcome) {
-      setRobotDisplay(outcome.contractChoice)
-    }
-  }, [outcome])
+    if(!contract || !web3) return;
 
-  const handleChange = (e) => {
-    setInput(e.target.value)
+    const ContractChoiceReadyOptions = {
+      address: contract.options.address,
+      topics: [
+        '0xeb9ca182e0cd21b184dc949ba6d0b18a6450931e124f62d75da6a82cb34e6535',
+      ],
+    }
+    const ContractChoiceReadySuscription = 
+      web3.eth.subscribe(
+        'logs',
+        ContractChoiceReadyOptions,
+        (error, _) => {
+          if (error) {
+            console.error(error);
+          }
+      })
+      .on("data", function(log){
+        setResponseIsReady(true)
+        setRequestId(log.topics[1])
+      })
+      .on('error', err => console.log(err))
+
+    return () => ContractChoiceReadySuscription &&
+      ContractChoiceReadySuscription.unsubscribe((error, _) => {
+        if(error){
+          console.log('Suscription got error:', error);
+        }
+      })
+  }, [contract, web3, requestId])
+
+  useEffect(() => {
+    const getTokensBalance = async () => {
+      if(!contract || !accounts) return;
+      const balance = await contract.methods.balanceOf(accounts[0]).call()
+      setTokensBalance(balance)
+    }
+    getTokensBalance()
+  }, [contract, accounts, outcome.result])
+
+  useEffect(() => {
+    if(!contract) return;
+    initGameConstants(contract)
+  }, [contract])
+
+  useEffect(() => {
+    const getResponse = async () => {
+      // if no pending request or is not ready or was already set
+      if (requestId === 0 || !responseIsReady || !contract) return;
+
+      try {
+        const response = await contract.methods.queryOutcome(requestId).send({ from: accounts[0] });
+
+        const contractChoice = bytes32ToEmoji(
+          response.events.RoundOutcome.returnValues.contractChoice
+        )
+        const result = resultBytes32ToString(
+          response.events.RoundOutcome.returnValues.result
+        )
+        setOutcome({
+          contractChoice: contractChoice,
+          result: result
+        })
+        setIsLoading(false)
+        setTimeout(() => {
+          setOutcome({
+            contractChoice: null,
+            result: null
+          })
+          setRequestId(0);
+          setResponseIsReady(false);
+        }, 5000);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    getResponse();
+  }, [responseIsReady, accounts, requestId, contract]);
+
+  useEffect(() => {
+    if(outcome.result) return;
+    setUserDisplay('')
+  }, [outcome.result])
+
+
+  // Funcions
+  const handleClick = async (choice) => {
+    if(!contract || !accounts) return;
+    try {
+      setUserDisplay(choice)
+      setIsLoading(true)
+      await contract.methods.play(
+        emojiToBytes32(choice)
+      ).send({ from: accounts[0] })
+      const balance = await contract.methods.balanceOf(accounts[0]).call()
+      setTokensBalance(balance)
+    } catch (error) {
+      console.error(error);
+    }
   }
+
+  let robotDisplay = ''
+  let resultColor = 'text-slate-900'
+  if(outcome.result && outcome.contractChoice){
+    robotDisplay = outcome.contractChoice
+    if(outcome.result === resultBytes32ToString(outcomes.PLAYER_WINS)){
+      resultColor = 'text-green-500'
+    } else if(outcome.result === resultBytes32ToString(outcomes.TIED_ROUND)){
+      resultColor = 'text-slate-600'
+    } else if(outcome.result === resultBytes32ToString(outcomes.PLAYER_LOSES)){
+      resultColor = 'text-red-500'
+    }
+  } 
 
   return (
     <>
       <div className='max-w-md sm:grid sm:grid-cols-2 sm:mx-auto'>
         <span className='bg-green-200 font-body text-sm text-slate-900 py-2 px-6 rounded-lg sm:col-span-2 justify-self-end'>
-          {tokensAmount} RPS
+          {tokensBalance} RPS
         </span>
         <h2 className='font-display uppercase text-xl font-bold my-4 '>
           You
@@ -39,23 +162,14 @@ const Play = ({ isLoading, playGame, tokensAmount, outcome, query }) => {
         </h2>
         <p className='w-36 h-36 mx-auto py-6 text-8xl sm:row-start-3 text-center'>
           {isLoading ? (
-            <svg className="animate-spin h-20 w-20 text-green-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+            <Loader />
           ) : robotDisplay}
         </p>
       </div>
       {outcome && (
-        <p className='max-w-md font-body text-xl font-medium'>
+        <p className={`max-w-md font-body text-xl font-medium text-center my-6 mx-auto ${resultColor}`}>
           {outcome.result}
         </p>
-      )}
-      {isLoading && (
-        <>
-          <input type='text' className='' value={input} onChange={handleChange} />
-          <Button onClick={() => query(input)}>Send</Button>
-        </>
       )}
       <h2 className='font-display font-semibold text-2xl text-center mb-3'>Select an option</h2>
       <div className='flex flex-col gap-2'>
