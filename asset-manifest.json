@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/Crypto-Rock-Paper-Scissors/static/css/main.ea1971b1.css",
+    "main.js": "/Crypto-Rock-Paper-Scissors/static/js/main.6d95948f.js",
+    "static/js/787.f2976fec.chunk.js": "/Crypto-Rock-Paper-Scissors/static/js/787.f2976fec.chunk.js",
+    "index.html": "/Crypto-Rock-Paper-Scissors/index.html",
+    "main.ea1971b1.css.map": "/Crypto-Rock-Paper-Scissors/static/css/main.ea1971b1.css.map",
+    "main.6d95948f.js.map": "/Crypto-Rock-Paper-Scissors/static/js/main.6d95948f.js.map",
+    "787.f2976fec.chunk.js.map": "/Crypto-Rock-Paper-Scissors/static/js/787.f2976fec.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ea1971b1.css",
+    "static/js/main.6d95948f.js"
+  ]
+}
